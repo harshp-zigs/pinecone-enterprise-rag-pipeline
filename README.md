@@ -79,12 +79,4 @@ Keep metadata lean. Size limits apply, so confirm current limits in the Pinecone
 
 Ready to build retrieval you can trust? Visit [zignuts.com](https://zignuts.com/) to speak with the team.
 
-## Publish with GitHub Pages
-
-1. Add `pinecone-embedding-pipeline-orchestration.jpg` to the repository root.
-2. Go to **Settings > Pages**, choose the `main` branch and the `/ (root)` folder, then save.
-3. The site will be available at `https://harshp-zigs.github.io/pinecone-enterprise-rag-pipeline/`.
-
-## Topics
-
 `pinecone` `enterprise-rag` `chunking` `embeddings` `metadata-filtering` `vector-database` `langchain`
