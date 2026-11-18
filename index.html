@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chunking, Embeddings, and Metadata Filtering: Optimizing Pinecone for Enterprise RAG</title>
+  <meta name="description" content="Retrieval quality in enterprise RAG is decided by chunking, embeddings, and metadata filtering. Learn how to tune each one when building on Pinecone.">
+  <meta name="keywords" content="Pinecone, enterprise RAG, chunking strategy, embeddings, metadata filtering, vector database, LangChain, retrieval quality">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://harshp-zigs.github.io/pinecone-enterprise-rag-pipeline/">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Chunking, Embeddings, and Metadata Filtering: Optimizing Pinecone for Enterprise RAG">
+  <meta property="og:description" content="How chunk size, embedding choices, and metadata filters shape retrieval quality in enterprise RAG on Pinecone.">
+  <meta property="og:image" content="https://harshp-zigs.github.io/pinecone-enterprise-rag-pipeline/pinecone-embedding-pipeline-orchestration.jpg">
+  <meta property="og:url" content="https://harshp-zigs.github.io/pinecone-enterprise-rag-pipeline/">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      <p class="site-label">Enterprise RAG Notebook</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <article>
+      <h1>Chunking, Embeddings, and Metadata Filtering: Optimizing Pinecone for Enterprise RAG</h1>
+
+      <figure class="hero">
+        <img src="pinecone-embedding-pipeline-orchestration.jpg" alt="Pinecone embedding pipeline orchestration showing chunking, embeddings, and metadata filtering for enterprise RAG" width="1200" height="630">
+      </figure>
+
+      <p class="lead">
+        When an enterprise RAG system gives a poor answer, the language model usually gets the blame. In most cases the real cause sits earlier, in how documents were split, how they were embedded, and whether the right filters narrowed the search. Get those three right, and the model has far better material to work with.
+      </p>
+
+      <nav class="toc" aria-label="Table of contents">
+        <h2>In This Notebook</h2>
+        <ol>
+          <li><a href="#retrieval-first">Why Retrieval Comes First</a></li>
+          <li><a href="#chunking">Chunking</a></li>
+          <li><a href="#embeddings">Embeddings</a></li>
+          <li><a href="#metadata">Metadata Filtering</a></li>
+          <li><a href="#namespaces">Namespaces and Tenancy</a></li>
+          <li><a href="#quality">Measuring Retrieval Quality</a></li>
+          <li><a href="#operations">Operating the Index</a></li>
+          <li><a href="#faqs">FAQs</a></li>
+        </ol>
+      </nav>
+
+      <section id="retrieval-first">
+        <h2>Why Retrieval Comes First</h2>
+        <p>
+          A RAG answer can only be as good as the passages retrieved for it. If the right passage never reaches the prompt, no amount of prompt tuning will fix the result. Retrieval tuning is also cheaper and more measurable than model tuning, which makes it the best place to start.
+        </p>
+        <p>
+          Teams building at scale often treat the whole path from ingestion to answer as one system, which is where <a href="https://zignuts.com/ai-services/ai-integration/pinecone-integration-services?utm_source=seo_web2.0&amp;utm_medium=backlink&amp;utm_campaign=seo_referral&amp;utm_id=11" target="_blank" rel="noopener">Pinecone and LangChain RAG orchestration</a> comes in: the index stores and searches vectors, and the orchestration layer controls how documents are split, embedded, filtered, and passed to the model.
+        </p>
+      </section>
+
+      <section id="chunking">
+        <h2>Chunking</h2>
+        <p>
+          A chunk is the unit of retrieval. Make it too large and it carries several topics, which blurs the match. Make it too small and it loses the context that gives it meaning.
+        </p>
+        <div class="chunks" aria-label="Chunk overlap illustration">
+          <div class="chunk c1"><b>Chunk 1</b><span>Sections 1 to 3</span></div>
+          <div class="chunk c2"><b>Chunk 2</b><span>Sections 3 to 5</span></div>
+          <div class="chunk c3"><b>Chunk 3</b><span>Sections 5 to 7</span></div>
+        </div>
+        <p class="caption">Overlap keeps ideas that cross a boundary intact in at least one chunk.</p>
+        <ul>
+          <li><strong>Split on structure first.</strong> Respect headings, paragraphs, tables, and list items before falling back to a fixed size.</li>
+          <li><strong>Add modest overlap.</strong> A small overlap protects sentences that straddle a boundary.</li>
+          <li><strong>Keep tables and code whole.</strong> Cutting a table in half destroys its meaning.</li>
+          <li><strong>Carry context into each chunk.</strong> Prepend the document title and section heading so the chunk makes sense alone.</li>
+          <li><strong>Tune by testing.</strong> The best size depends on your documents and questions, so compare a few settings on a fixed test set.</li>
+        </ul>
+      </section>
+
+      <section id="embeddings">
+        <h2>Embeddings</h2>
+        <p>
+          The embedding model decides what "similar" means. A model that suits general text may struggle with legal clauses, product codes, or medical terms.
+        </p>
+        <ol>
+          <li><strong>Match the model to the domain.</strong> Test candidates on your own questions, not only on public benchmarks.</li>
+          <li><strong>Use the same model for indexing and querying.</strong> Mixing models produces vectors that cannot be compared.</li>
+          <li><strong>Match the index to the model.</strong> The index dimension and distance metric must fit the embedding model you choose.</li>
+          <li><strong>Version your embeddings.</strong> Record the model name and version in metadata so you know what to re-embed after a change.</li>
+          <li><strong>Plan for re-embedding.</strong> Changing models means rebuilding the index, so keep source text and a repeatable pipeline.</li>
+          <li><strong>Consider hybrid search.</strong> Combining semantic and keyword signals often helps with exact terms such as part numbers.</li>
+        </ol>
+      </section>
+
+      <section id="metadata">
+        <h2>Metadata Filtering</h2>
+        <p>
+          Metadata lets you narrow the search before similarity ranking, so the model only sees passages the user should see and that fit the question. It is also your main tool for access control inside the retrieval step.
+        </p>
+        <pre class="code" aria-label="Example metadata filter"><code>query:
+  vector:     [ ...embedding of the question... ]
+  top_k:      8
+  namespace:  "acme-corp"
+  filter:
+    doc_type:     { "$in": ["policy", "contract"] }
+    access_level: { "$lte": 2 }
+    year:         { "$gte": 2024 }</code></pre>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Metadata field</th><th scope="col">Why it helps</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">tenant or business unit</th><td>Keeps one customer's data out of another's results</td></tr>
+              <tr><th scope="row">access level or role</th><td>Enforces permissions during retrieval, not after</td></tr>
+              <tr><th scope="row">document type</th><td>Lets a query target policies, contracts, or manuals</td></tr>
+              <tr><th scope="row">date or version</th><td>Prefers current content and avoids outdated answers</td></tr>
+              <tr><th scope="row">source and document id</th><td>Supports citations, updates, and deletes</td></tr>
+              <tr><th scope="row">embedding model version</th><td>Tracks which vectors need re-embedding</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Keep metadata lean and use fields you actually filter on. Metadata has size limits and affects storage and speed, so confirm the current limits in the Pinecone documentation.
+        </p>
+      </section>
+
+      <section id="namespaces">
+        <h2>Namespaces and Tenancy</h2>
+        <p>
+          Namespaces partition an index, which makes them a natural fit for tenant isolation and for separating environments or data classes. A query can target a single namespace, so one tenant's search never touches another's vectors.
+        </p>
+        <ul class="checks">
+          <li>One namespace per tenant, or per tenant and data class</li>
+          <li>Separate namespaces or indexes for test and production data</li>
+          <li>Filters still applied inside a namespace for roles and document types</li>
+          <li>A documented process for deleting a tenant's data on request</li>
+        </ul>
+      </section>
+
+      <section id="quality">
+        <h2>Measuring Retrieval Quality</h2>
+        <p>
+          Tuning without measurement is guessing. Build a golden set of real questions, each paired with the passages that should be retrieved, and score every change against it.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Measure</th><th scope="col">What it tells you</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Recall at k</th><td>Whether the right passage appears in the top results</td></tr>
+              <tr><th scope="row">Precision at k</th><td>How much of the retrieved text is actually relevant</td></tr>
+              <tr><th scope="row">Rank of first hit</th><td>How early the useful passage arrives</td></tr>
+              <tr><th scope="row">Filter correctness</th><td>Whether restricted content ever leaks into results</td></tr>
+              <tr><th scope="row">Latency and cost</th><td>Whether quality gains are affordable at scale</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          A reranking step on the top results can raise precision further. Test it on the same golden set to confirm the gain is worth the added latency.
+        </p>
+      </section>
+
+      <section id="operations">
+        <h2>Operating the Index</h2>
+        <ul>
+          <li><strong>Use stable ids.</strong> Derive vector ids from document id and chunk position so repeated ingestion updates records instead of duplicating them.</li>
+          <li><strong>Handle updates and deletes.</strong> When a document changes, remove its old chunks, then insert the new ones.</li>
+          <li><strong>Batch your writes.</strong> Upsert in batches and retry safely.</li>
+          <li><strong>Watch freshness.</strong> Track how long it takes for a new document to become searchable.</li>
+          <li><strong>Monitor drift.</strong> Re-run the golden set on a schedule to catch quality changes early.</li>
+        </ul>
+      </section>
+
+      <section id="faqs">
+        <h2>FAQs</h2>
+
+        <h3>What is the best chunk size for enterprise RAG?</h3>
+        <p>There is no single best size. It depends on your documents and questions, so test a few sizes with modest overlap against a fixed set of real questions.</p>
+
+        <h3>Why must queries and documents use the same embedding model?</h3>
+        <p>Vectors from different models live in different spaces, so their distances are not meaningful when compared.</p>
+
+        <h3>What should go into metadata?</h3>
+        <p>Fields you filter or cite on, such as tenant, access level, document type, date, source, and embedding model version. Avoid storing large text blobs there.</p>
+
+        <h3>Should we use one namespace per tenant?</h3>
+        <p>It is a common and effective pattern for isolation. Confirm limits and behavior in the current Pinecone documentation for your plan.</p>
+
+        <h3>How do we know if retrieval is improving?</h3>
+        <p>Score every change against a golden set using recall, precision, and rank of the first relevant result, alongside latency and cost.</p>
+      </section>
+
+      <section id="conclusion">
+        <h2>Conclusion</h2>
+        <p>
+          Strong enterprise RAG is built in the retrieval layer. Split documents along their natural structure, choose and version embeddings deliberately, filter with clean metadata, isolate tenants, and measure everything against a golden set. Do that, and the language model finally has the right evidence to answer from.
+        </p>
+      </section>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 Enterprise RAG Notebook. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>
